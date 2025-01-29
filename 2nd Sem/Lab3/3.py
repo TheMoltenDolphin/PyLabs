@@ -1,4 +1,4 @@
-#n = int(input())
+n = int(input())
 
 triangle = []
 for i in range(n):
