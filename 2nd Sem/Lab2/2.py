@@ -1,24 +1,12 @@
-n = int(input())
-print()
-for i in range(n):
-    for j in range(1, n-i+1):
-        print(j, end="")
-    print()
+inp = "".join(input())
+s = list(set(inp))
+k = [inp.count(i) for i in s]
+
+def sort_key(i):
+    return k["".join(s).find(i)]
 
 
-print()
-
-
-a = "".join([str(i) for i in range(n, 1, -1)])
-a = a + "1" + a[::-1]
-
-i = 0
-c = 0
-print(a)
-while i < n:
-    b = len(str(n-i))
-    c += b
-    a = a[b: len(a)-b]
-    print(" "*c, end="")
-    print(a)
-    i+=1
+sk = sorted(s, key=sort_key)
+k = sorted(k)
+for i in range(1, 3+1):
+    print(sk[-i] + " " + str(k[-i]))
