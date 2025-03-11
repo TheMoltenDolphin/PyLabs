@@ -10,7 +10,12 @@ for i in range(len(s)):
 for i in range(10):
     print(d[i], end=" ")
 
-for i in range(10):
-    if d[i] not
+max3 = sorted(list(d.values()))[7:]
 
-print(s)
+for i in range(10):
+    if d[i] not in max3:
+        del d[i]
+    else:
+        max3[max3.index(d[i])] = 0
+
+print(d)
