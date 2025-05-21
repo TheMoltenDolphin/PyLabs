@@ -1,8 +1,7 @@
 import json
 
-with open(input(), "r") as f:
-    tables = json.load(f)
-    f.close()
+with open("Sample-JSON-file-with-multiple-records.json") as file:
+    tables = json.load(file)
 
 for table in tables:
     csv = ""
@@ -10,12 +9,12 @@ for table in tables:
     for data in tables[table]:
         for column in data:
             if not flag:
-                csv += f'"{column}",'
+                csv += f'"{column}",' 
             else:
                 csv += f'"{data[column]}",'
         flag = True
-        csv = csv.rstrip(",")
+        csv = csv.rstrip(",") 
         csv += "\n"
-    with open(f"{table}.csv", "w") as f:
-        f.write(csv)
-        f.close()
+    with open (f"{table}.csv", 'w') as file:
+        file.write(csv)
+
