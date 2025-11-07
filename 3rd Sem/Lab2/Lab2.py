@@ -28,9 +28,8 @@ class Printer:
 
     @staticmethod
     def load_font(file_path: str):
-        """Load font templates from a JSON file."""
         if not os.path.exists(file_path):
-            raise FileNotFoundError(f"Font file not found: {file_path}")
+            raise FileNotFoundError(f"шрифт не найден: {file_path}")
         with open(file_path, 'r', encoding='utf-8') as file:
             return json.load(file)
 
@@ -45,7 +44,7 @@ class Printer:
                 else:
                     lines = [line + " " + char_line for line, char_line in zip(lines, char_lines)]
             else:
-                raise ValueError(f"Character '{char}' not found in font.")
+                raise ValueError(f"символ '{char}' не найден в шрифте.")
         return lines
 
     @classmethod
@@ -61,7 +60,7 @@ class Printer:
                 else:
                     lines = [line + " " + char_line for line, char_line in zip(lines, char_lines)]
             else:
-                raise ValueError(f"Character '{char}' not found in font.")
+                raise ValueError(f"символ '{char}' не найден в шрифте.")
 
         for i, line in enumerate(lines):
             print(f"\033[{position[1] + i};{position[0]}H{color.value}{line}{Color.RESET.value}", end="\n")
