@@ -1,0 +1,5 @@
+[ERROR] [26.11.2025 22:25:29] Critical system shutdown.
+[INFO] [26.11.2025 22:25:29] system configuration loaded.
+[WARN] [26.11.2025 22:25:29] Low system memory warning.
+[ERROR] [26.11.2025 22:25:29] Unauthorised user 1001 attempted login.
+[WARN] [26.11.2025 22:25:29] API response time 400ms exceeded threshold.
