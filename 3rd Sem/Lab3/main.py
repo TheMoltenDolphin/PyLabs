@@ -66,6 +66,7 @@ class BasicLogFormatter:
         timestamp = datetime.now().strftime("%d.%m.%Y %H:%M:%S")
         formatted_text = f"[{log_level.value}] [{timestamp}] {text}"
         return formatted_text
+        
 
 class Logger:
 
@@ -108,7 +109,7 @@ def demonstrate_logger():
         print(f"Файл '{LOG_FILENAME}' очищен.")
 
     level_filter = LevelFilter(LogLevel.INFO) 
-    regex_filter = ReLogFilter(pattern=r'(user|\d{3}|system)')
+    regex_filter = ReLogFilter(pattern=r'(user|\d{3}|system|\d{4}ms)')
 
     formatter = BasicLogFormatter()
 
@@ -129,6 +130,8 @@ def demonstrate_logger():
     my_logger.log_warn("Low system memory warning.") 
 
     my_logger.log_error("Unauthorised user 1001 attempted login.") 
+
+    my_logger.log_warn("Ping of current service is 1000ms.") 
 
     my_logger.log_warn("API response time 400ms exceeded threshold.") 
     
