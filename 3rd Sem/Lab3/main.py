@@ -106,7 +106,7 @@ def demonstrate_logger():
     
     if os.path.exists(LOG_FILENAME):
         os.remove(LOG_FILENAME)
-        print(f"Файл '{LOG_FILENAME}' очищен.")
+        
 
     level_filter = LevelFilter(LogLevel.INFO) 
     regex_filter = ReLogFilter(pattern=r'(user|\d{3}|system|\d{4}ms)')
