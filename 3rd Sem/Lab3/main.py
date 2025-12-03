@@ -135,6 +135,8 @@ def demonstrate_logger():
 
     my_logger.log_warn("API response time 400ms exceeded threshold.") 
     
+    my_logger.log_error("It's Fine, HAHA NO!") 
+
 
 if __name__ == "__main__":
     demonstrate_logger()
