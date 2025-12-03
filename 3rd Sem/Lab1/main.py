@@ -29,10 +29,14 @@ class Angle:
     def radians(self, value):
         self.rad = self._normalize(value)
 
-    def __str__(self): return f"{self.degrees:.2f}°"
-    def __repr__(self): return f"Angle({self.rad:.4f} rad)"
-    def __float__(self): return float(self.rad)
-    def __int__(self): return int(self.rad)
+    def __str__(self):
+        return f"{self.degrees:.2f}°"
+    def __repr__(self):
+        return f"Angle({self.rad:.4f} rad)"
+    def __float__(self):
+        return float(self.rad)
+    def __int__(self):
+        return int(self.rad)
 
     def __eq__(self, other : Union['Angle', float, int]):
         val = other.rad if isinstance(other, Angle) else self._normalize(other)
@@ -46,14 +50,18 @@ class Angle:
         val = other.rad if isinstance(other, Angle) else other
         return Angle(self.rad + val)
     
-    def __radd__(self, other : Union['Angle', float, int]): return self.__add__(other)
+    def __radd__(self, other : Union['Angle', float, int]):
+        return self.__add__(other)
     def __sub__(self, other : Union['Angle', float, int]):
         val = other.rad if isinstance(other, Angle) else other
         return Angle(self.rad - val)
 
-    def __mul__(self, number : Union[float, int]): return Angle(self.rad * number)
-    def __rmul__(self, number : Union[float, int]): return self.__mul__(number)
-    def __truediv__(self, number : Union[float, int]): return Angle(self.rad / number)
+    def __mul__(self, number : Union[float, int]):
+        return Angle(self.rad * number)
+    def __rmul__(self, number : Union[float, int]):
+        return self.__mul__(number)
+    def __truediv__(self, number : Union[float, int]):
+        return Angle(self.rad / number)
 
 
 class AngleRange:
@@ -100,8 +108,10 @@ class AngleRange:
 
     def __add__(self, other : 'AngleRange'):
         
-        if other in self: return self
-        if self in other: return other
+        if other in self:
+            return self
+        if self in other:
+            return other
         
         s_in = self.start in other
         e_in = self.end in other
@@ -139,7 +149,6 @@ class AngleRange:
 
              return [r1, r2]
         
-
         return self
 
 print("--- Angle ---")
