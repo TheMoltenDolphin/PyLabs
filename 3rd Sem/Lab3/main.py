@@ -1,7 +1,7 @@
 from enum import Enum
 from typing import Protocol, List
 import re
-from datetime import datetime
+from datetime import date, datetime
 import os 
 
 
@@ -31,7 +31,11 @@ class SimpleLogFilter:
 
 class ReLogFilter:
     def __init__(self, pattern: str):
-        self._compiled_pattern = re.compile(pattern)
+        try:
+            self._compiled_pattern = re.compile(pattern)
+        except:
+            self._compiled_pattern = re.compile(r'')
+            repr("Ошибка в регулярном выражении. Используется выражение по умолчанию")
 
     def match(self, log_level: LogLevel, text: str) -> bool:
         return bool(self._compiled_pattern.search(text))
@@ -57,17 +61,24 @@ class FileHandler:
         self._filename = filename
 
     def handle(self, log_level: LogLevel, text: str) -> None:
-        with open(self._filename, 'a', encoding='utf-8') as f:
-            f.write(text + '\n')
+        try:
+            with open(self._filename, 'a', encoding='utf-8') as f:
+                f.write(text + '\n')
+        except:
+            with open("default_logs.txt", 'a', encoding='utf-8') as f:
+                f.write(text + '\n')
+            repr("Ошибка при чтении/создании файла, создан базовый файл")
 
 
 class BasicLogFormatter:
+    def __init__(self, date_format : str = "%d.%m.%Y %H:%M:%S"):
+        self._date_format = date_format
+
     def format(self, log_level: LogLevel, text: str) -> str:
-        timestamp = datetime.now().strftime("%d.%m.%Y %H:%M:%S")
+        timestamp = datetime.now().strftime(self._date_format)
         formatted_text = f"[{log_level.value}] [{timestamp}] {text}"
         return formatted_text
         
-
 class Logger:
 
     def __init__(
@@ -86,7 +97,7 @@ class Logger:
 
         formatted_text = text
         for formatter in self._formatters:
-            formatted_text = formatter.format(log_level, formatted_text)
+            formatted_text = formatter.format(log_level, formatted_text, )
 
         for handler in self._handlers:
             handler.handle(log_level, formatted_text)
@@ -111,7 +122,7 @@ def demonstrate_logger():
     level_filter = LevelFilter(LogLevel.INFO) 
     regex_filter = ReLogFilter(pattern=r'(user|\d{3}|system|\d{4}ms)')
 
-    formatter = BasicLogFormatter()
+    formatter = BasicLogFormatter("%d-%m-%Y %H-%M-%S хаха тест форматтера")
 
     console_handler = ConsoleHandler()
     file_handler = FileHandler(LOG_FILENAME)
@@ -136,7 +147,6 @@ def demonstrate_logger():
     my_logger.log_warn("API response time 400ms exceeded threshold.") 
     
     my_logger.log_error("It's Fine, HAHA NO!") 
-
 
 if __name__ == "__main__":
     demonstrate_logger()

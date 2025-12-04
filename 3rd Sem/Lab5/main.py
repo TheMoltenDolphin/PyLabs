@@ -53,7 +53,7 @@ class JsonFileRepository(Generic[T]):
                 data = json.load(f)
                 return [self.model_type(**item) for item in data]
         except (json.JSONDecodeError, TypeError) as e:
-            print(f"Ошибка чтения JSON из файла {self.filename}: {e}")
+            repr(f"Ошибка чтения JSON из файла {self.filename}: {e}")
             return []
 
     def _save_data(self):
@@ -66,8 +66,11 @@ class JsonFileRepository(Generic[T]):
     def get_by_id(self, id: int) -> T | None:
         return next((item for item in self._data if getattr(item, 'id') == id), None)
 
+    def get_by_login(self, login: int) -> T | None:
+        return next((item for item in self._data if getattr(item, 'login') == login), None)
+
     def add(self, item: T) -> None:
-        if self.get_by_id(getattr(item, 'id')) is not None:
+        if self.get_by_login(getattr(item, 'login')) is not None:
             return
         self._data.append(item)
         self._save_data()
@@ -139,6 +142,7 @@ def main():
     auth_service = AuthService(user_repo)
 
     u1 = User(id=1, name="Boris", login="boris_login", password="123", email="b@test.com")
+    u1 = User(id=4, name="SASHA", login="boris_login", password="123", email="b@test.com")
     u2 = User(id=2, name="Anna", login="anna_login", password="321")
     u3 = User(id=3, name="Clara", login="clara_login", password="abc", address="123 Main St")
     
@@ -164,7 +168,7 @@ def main():
     auth_service.sign_in(u3)
     print(f"Смена пользователя. Текущий пользователь: {auth_service.current_user}")
 
-    print("\n--- ЗАВЕРШЕНИЕ ПРОГРАММЫ (симуляция выхода) ---")
+    print("\n--- ЗАВЕРШЕНИЕ ПРОГРАММЫ ---")
 
 if __name__ == "__main__":
     main()

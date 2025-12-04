@@ -82,15 +82,17 @@ class AngleRange:
         e_sym = "]" if self.inc_end else ")"
         return f"{s_sym}{self.start}, {self.end}{e_sym}"
     
-    def __str__(self): return self.__repr__()
+    def __str__(self):
+        return self.__repr__()
 
     def __eq__(self, other : 'AngleRange'):
         return (self.start == other.start and self.end == other.end and 
                 self.length() == other.length())
 
-    def __lt__(self, other): return self.length() < other.length()
+    def __lt__(self, other): 
+        return self.length() < other.length()
 
-    def __contains__(self, item : Union['Angle', 'AngleRange']):
+    def __contains__(self, item : Union['Angle', 'AngleRange', float, int]):
         if isinstance(item, AngleRange):
             return (item.start in self) and (item.end in self) and (item.length() <= self.length())
         
@@ -182,9 +184,29 @@ print(f"Вычитание {r1} - {r2} = {res_sub}")
 r4 = AngleRange(Angle(90, True), Angle(180, True))
 r5 = AngleRange(Angle(90, True), Angle(180, True), False, False)
 
+r6 = AngleRange(Angle(math.pi/2), Angle(math.pi*5), True, True)
+r7 = AngleRange(Angle(math.pi/3), Angle(math.pi*13/2), True, True)
+
+print(f"{repr(r6)} in {repr(r7)} {r6 in r7}")
+
+r8 = AngleRange(Angle(10, True), Angle(50, True), False, False)
+r9 = AngleRange(Angle(25, True), Angle(30, True), True, True)
+
+print(f"{repr(r8)} - {repr(r9)} = {r8-r9}")
+
+r10 = AngleRange(Angle(10, True), Angle(50, True), False, False)
+r11 = AngleRange(Angle(25, True), Angle(30, True), False, False)
+
+print(f"{repr(r10)} - {repr(r11)} = {r10-r11}")
+
+r12 = AngleRange(Angle(10, True), Angle(50, True), False, False)
+r13 = AngleRange(Angle(25, True), Angle(30, True), True, False)
+
+print(f"{repr(r12)} - {repr(r13)} = {r12-r13}")
+
+
 res_sub2 = r4 - r5
 res_add2 = r4 + r5
 
 print(f"Сложение {r4} + {r5} = {res_add2}")
 print(f"Вычитание {r4} - {r5} = {res_sub2}") 
-
