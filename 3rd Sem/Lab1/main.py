@@ -8,10 +8,11 @@ class Angle:
             rads = value.rad
         else:
             rads = math.radians(value) if is_degrees else float(value)
-        self.rad = self._normalize(rads)
+        self.rad = (rads)
 
-    def _normalize(self, value):
-        return value % (2 * math.pi)
+    def _normalize_angle(self, rad):
+        rad = rad % (2 * math.pi)
+        return rad
 
     @property
     def degrees(self):
@@ -19,7 +20,7 @@ class Angle:
 
     @degrees.setter
     def degrees(self, value):
-        self.rad = self._normalize(math.radians(value))
+        self.rad = (math.radians(value))
 
     @property
     def radians(self):
@@ -27,7 +28,7 @@ class Angle:
 
     @radians.setter
     def radians(self, value):
-        self.rad = self._normalize(value)
+        self.rad = (value)
 
     def __str__(self):
         return f"{self.degrees:.2f}°"
@@ -39,11 +40,11 @@ class Angle:
         return int(self.rad)
 
     def __eq__(self, other : Union['Angle', float, int]):
-        val = other.rad if isinstance(other, Angle) else self._normalize(other)
-        return abs(self.rad - val) < 1e-10
+        val = other._normalize_angle(other.rad) if isinstance(other, Angle) else self._normalize_angle(other)
+        return abs(self._normalize_angle(self.rad) - val) < 1e-10
 
     def __lt__(self, other : Union['Angle', float, int]):
-        val = other.rad if isinstance(other, Angle) else self._normalize(other)
+        val = other.rad if isinstance(other, Angle) else (other)
         return self.rad < val
 
     def __add__(self, other : Union['Angle', float, int]):
@@ -153,6 +154,8 @@ class AngleRange:
         
         return self
 
+print
+
 print("--- Angle ---")
 a1 = Angle(90, is_degrees=True)
 a2 = Angle(math.pi) 
@@ -176,6 +179,8 @@ print(f"Range 2 входит в Range 1? {r2 in r1}")
 print("\n--- Арифметика промежутков ---")
 r3 = AngleRange(Angle(10, True), Angle(30, True))
 res_add = r1 + r3
+
+print(f"{r3} in {r1} {r3 in r1}")
 print(f"Сложение {r1} + {r3} = {res_add}")
 
 res_sub = r1 - r2
