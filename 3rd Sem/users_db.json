@@ -1,0 +1,26 @@
+[
+    {
+        "name": "Boris",
+        "login": "boris_login",
+        "password": "123",
+        "id": 1,
+        "email": "new_email@test.com",
+        "address": null
+    },
+    {
+        "name": "Anna",
+        "login": "anna_login",
+        "password": "321",
+        "id": 2,
+        "email": null,
+        "address": null
+    },
+    {
+        "name": "Clara",
+        "login": "clara_login",
+        "password": "abc",
+        "id": 3,
+        "email": null,
+        "address": "123 Main St"
+    }
+]

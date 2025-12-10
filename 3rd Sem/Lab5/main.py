@@ -5,10 +5,10 @@ from typing import Protocol, TypeVar, Sequence, Generic, Optional
 
 @dataclass
 class User:
-    id: int
     name: str
     login: str
     password: str = field(repr=False)
+    id: int = field(default=0)
     email: str | None = None
     address: str | None = None
 
@@ -91,6 +91,16 @@ class UserRepository(JsonFileRepository[User], IUserRepository):
 
     def get_by_login(self, login: str) -> User | None:
         return next((u for u in self._data if u.login == login), None)
+    
+    def _get_next_id(self) -> int:
+        return len(self._data) + 1
+
+    def add(self, item: User) -> None:
+        if self.get_by_login(getattr(item, 'login')) is not None:
+            return
+        item.id = self._get_next_id()
+        self._data.append(item)
+        self._save_data()
 
 class AuthService(IAuthService):
     def __init__(self, user_repo: IUserRepository, session_file: str = "session.json"):
@@ -104,16 +114,16 @@ class AuthService(IAuthService):
             try:
                 with open(self.session_file, 'r', encoding='utf-8') as f:
                     data = json.load(f)
-                    user_id = data.get("user_id")
-                    if user_id is not None:
-                        self._current_user = self.repo.get_by_id(user_id)
+                    login = data.get("login")
+                    if login is not None:
+                        self._current_user = self.repo.get_by_login(login)
             except (json.JSONDecodeError, TypeError) as e:
                 print(f"Ошибка чтения JSON из файла {self.session_file}: {e}")
 
     def sign_in(self, user: User) -> None:
         self._current_user = user
         with open(self.session_file, 'w') as f:
-            json.dump({"user_id": user.id}, f)
+            json.dump({"login": user.login}, f)
 
     def sign_out(self) -> None:
         self._current_user = None
@@ -141,10 +151,9 @@ def main():
     user_repo = UserRepository("users_db.json")
     auth_service = AuthService(user_repo)
 
-    u1 = User(id=1, name="Boris", login="boris_login", password="123", email="b@test.com")
-    u1 = User(id=4, name="SASHA", login="boris_login", password="123", email="b@test.com")
-    u2 = User(id=2, name="Anna", login="anna_login", password="321")
-    u3 = User(id=3, name="Clara", login="clara_login", password="abc", address="123 Main St")
+    u1 = User(name="Boris", login="boris_login", password="123", email="b@test.com")
+    u2 = User(name="Anna", login="anna_login", password="321")
+    u3 = User(name="Clara", login="clara_login", password="abc", address="123 Main St")
     
     user_repo.add(u1)
     user_repo.add(u2)

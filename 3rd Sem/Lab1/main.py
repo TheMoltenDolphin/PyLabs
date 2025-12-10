@@ -39,6 +39,8 @@ class Angle:
     def __int__(self):
         return int(self.rad)
 
+
+
     def __eq__(self, other : Union['Angle', float, int]):
         val = other._normalize_angle(other.rad) if isinstance(other, Angle) else self._normalize_angle(other)
         return abs(self._normalize_angle(self.rad) - val) < 1e-10
