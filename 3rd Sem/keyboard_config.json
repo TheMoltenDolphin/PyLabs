@@ -1,0 +1,29 @@
+{
+    "a": {
+        "type": "type",
+        "char": "a"
+    },
+    "b": {
+        "type": "type",
+        "char": "b"
+    },
+    "c": {
+        "type": "type",
+        "char": "c"
+    },
+    "ctrl+up": {
+        "type": "volume",
+        "dir": "up"
+    },
+    "ctrl+down": {
+        "type": "volume",
+        "dir": "down"
+    },
+    "ctrl+p": {
+        "type": "media"
+    },
+    "MEME": {
+        "type": "type",
+        "char": "\u2606*: .\uff61. o(\u2267\u25bd\u2266)o .\uff61.:*\u2606)"
+    }
+}
