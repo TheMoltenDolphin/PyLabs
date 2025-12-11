@@ -179,7 +179,6 @@ class KeyboardStateSaver:
         data = self.serializer.from_json(filename)
         
         if not data and buffer:
-            print(f"Конфигурация по умолчанию")
             data = DefaultConfigProvider.get_default_config(buffer)
         
         for key, cmd_data in data.items():
@@ -200,7 +199,6 @@ if __name__ == "__main__":
     kb.bind("ctrl+p", MediaCommand())
     kb.bind("MEME", TypeCommand(buf, "☆*: .｡. o(≧▽≦)o .｡.:*☆)"))
 
-    # 3. Симуляция нажатий
     print("--- Ввод текста ---")
     kb.press("a")
     kb.press("b")
