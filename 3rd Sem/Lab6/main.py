@@ -20,11 +20,11 @@ class TextBuffer:
 
 class BaseCommand:
     def execute(self):
-        pass
+        ...
     def undo(self):
-        pass
+        ...
     def get_data(self):
-        return {}
+        ...
 
 class TypeCommand(BaseCommand):
     def __init__(self, buffer, char):
