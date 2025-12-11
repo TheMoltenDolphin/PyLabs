@@ -1,30 +1,48 @@
 import json
 
 class TextBuffer:
-    def __init__(self):
+    def __init__(self, filename="output.txt"):
         self.text = []
+        self.filename = filename
+        self.clear_file()
+
+    def clear_file(self):
+        try:
+            with open(self.filename, 'w', encoding='utf-8') as f:
+                f.write("")
+        except IOError as e:
+            print(f"Ошибка очистки файла {self.filename}: {e}")
+
+    def update_file(self):
+        content = "".join(self.text)
+        try:
+            with open(self.filename, 'w', encoding='utf-8') as f:
+                f.write(content)
+            print(f"TEXT FILE (Файл '{self.filename}' обновлен): {content}")
+        except IOError as e:
+            print(f"Ошибка записи в файл {self.filename}: {e}")
 
     def add_char(self, char):
         self.text.append(char)
-        self.show()
+        self.update_file()
 
     def remove_last(self):
         if self.text:
             self.text.pop()
-        self.show()
+        self.update_file()
 
     def show(self):
-        content = "".join(self.text)
-        print(f"TEXT FILE: {content}")
+        # show теперь интегрирован в update_file
+        pass
 
 
 class BaseCommand:
     def execute(self):
-        ...
+        pass
     def undo(self):
-        ...
+        pass
     def get_data(self):
-        ...
+        pass
 
 class TypeCommand(BaseCommand):
     def __init__(self, buffer, char):
@@ -188,7 +206,9 @@ class KeyboardStateSaver:
 
 
 if __name__ == "__main__":
-    buf = TextBuffer()
+    FILE_NAME = "output.txt"
+    print(f"Используемый файл для вывода: {FILE_NAME}")
+    buf = TextBuffer(FILE_NAME)
     kb = Keyboard(buf)
 
     kb.bind("a", TypeCommand(buf, "a"))
@@ -199,27 +219,32 @@ if __name__ == "__main__":
     kb.bind("ctrl+p", MediaCommand())
     kb.bind("MEME", TypeCommand(buf, "☆*: .｡. o(≧▽≦)o .｡.:*☆)"))
 
-    print("--- Ввод текста ---")
+    print("\n--- Ввод текста ---")
     kb.press("a")
     kb.press("b")
     kb.press("c")
     
 
+    print("\n--- Откат ---")
     kb.undo() 
     kb.undo() 
+
+    print("\n--- Повтор ---")
     kb.redo() 
 
-
+    print("\n--- Другие команды ---")
     kb.press("ctrl+up")
     kb.press("ctrl+p")
     kb.press("MEME")
+
+    print("\n--- Откат 'MEME' ---")
     kb.undo() 
 
     mapper = DictMapper(buf)
     saver = KeyboardStateSaver(Serializer(), mapper)
     saver.save(kb, "keyboard_config.json")
 
-    print("\n--- Перезагрузка ---")
+    print("\n--- Перезагрузка и новый ввод ---")
     new_kb = Keyboard(buf) 
     saver.load(new_kb, "keyboard_config.json", buf)
     
