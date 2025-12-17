@@ -67,8 +67,13 @@ class VolumeCommand(BaseCommand):
         print(f"Громкость {action}")
 
     def undo(self):
-        action = "уменьшена" if self.direction == "up" else "увеличена"
-        print(f"Громкость {action} (отмена)")
+        if self.history:
+            cmd = self.history.pop()
+            cmd.undo()
+            self.redo_stack.append(cmd)
+            print(f"UNDO выполнен. Текущее состояние: {''.join(self.buffer.text)}")
+        else:
+            print("История пуста")
 
     def get_data(self):
         return {"type": "volume", "dir": self.direction}
