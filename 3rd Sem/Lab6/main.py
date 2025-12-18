@@ -31,10 +31,6 @@ class TextBuffer:
             self.text.pop()
         self.update_file()
 
-    def show(self):
-        # show теперь интегрирован в update_file
-        pass
-
 
 class BaseCommand:
     def execute(self):
