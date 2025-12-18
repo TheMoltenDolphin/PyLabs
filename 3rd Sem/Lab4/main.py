@@ -3,10 +3,8 @@ from typing import Any, Protocol, List, Generic, TypeVar
 T = TypeVar("T")
 
 class EventHandler(Protocol[T]):
-    def handle(self, sender: Any, args: T) -> None: ...
-
-class EventArgs: 
-    pass
+    def handle(self, sender: Any, args: T) -> None:
+        ...
 
 class Event(Generic[T]):
     def __init__(self):
@@ -24,11 +22,11 @@ class Event(Generic[T]):
         for handler in self._handlers:
             handler.handle(sender, args)
 
-class PropertyChangedEventArgs(EventArgs):
+class PropertyChangedEventArgs:
     def __init__(self, prop_name: str):
         self.property_name = prop_name
 
-class PropertyChangingEventArgs(EventArgs):
+class PropertyChangingEventArgs:
     def __init__(self, prop_name: str, old_val: Any, new_val: Any):
         self.property_name = prop_name
         self.old_value = old_val
@@ -37,26 +35,23 @@ class PropertyChangingEventArgs(EventArgs):
 
 class ConsoleLogger(EventHandler[PropertyChangedEventArgs]):
     def handle(self, sender: Any, args: PropertyChangedEventArgs):
-        print(f"Консоль: Свойство '{args.property_name}' изменено.")
+        print(f"Свойство '{args.property_name}' было изменено.")
 
 class FileLogger(EventHandler[PropertyChangedEventArgs]):
     def handle(self, sender: Any, args: PropertyChangedEventArgs):
-        filename = "log.txt"
+        filename = "events_log.txt"
         try:
             with open(filename, "a", encoding="utf-8") as f:
-                f.write(f"Файл: {sender} обновил {args.property_name}\n")
+                f.write(f"Лог: {sender} изменил {args.property_name}\n")
         except PermissionError:
-            print(f"Ошибка доступа к файлу {filename}")
-        except IOError:
-            print(f"Ошибка ввода-вывода с файлом {filename}")
+            print(f"Ошибка: нет прав доступа к файлу {filename}")
+        except IOError as e:
+            print(f"Ошибка ввода-вывода: {e}")
 
 class Validator(EventHandler[PropertyChangingEventArgs]):
     def handle(self, sender: Any, args: PropertyChangingEventArgs):
-        if args.property_name in ["age", "price"] and (args.new_value < 0):
-            print(f"Валидатор: Запрещено отрицательное значение для '{args.property_name}'!")
-            args.can_change = False
-        if args.property_name == "name" and args.new_value == "":
-            print("Валидатор: Имя не может быть пустым!")
+        if args.property_name in ["age", "price"] and args.new_value < 0:
+            print(f"Внимание: Нельзя установить отрицательное значение для '{args.property_name}'!")
             args.can_change = False
 
 class BaseObservable:
@@ -64,13 +59,13 @@ class BaseObservable:
         self.on_changed = Event[PropertyChangedEventArgs]()
         self.on_changing = Event[PropertyChangingEventArgs]()
 
-    def _set(self, name: str, current_val: Any, new_val: Any):
-        args = PropertyChangingEventArgs(name, current_val, new_val)
-        self.on_changing.invoke(self, args)
-        
-        if not args.can_change:
-            return current_val 
-        
+    def _update(self, name: str, old_val: Any, new_val: Any):
+        args_changing = PropertyChangingEventArgs(name, old_val, new_val)
+        self.on_changing.invoke(self, args_changing)
+
+        if not args_changing.can_change:
+            return old_val 
+
         self.on_changed.invoke(self, PropertyChangedEventArgs(name))
         return new_val
 
@@ -82,21 +77,13 @@ class Person(BaseObservable):
         self._city = city
 
     @property
-    def name(self): return self._name
-    @name.setter
-    def name(self, val): self._name = self._set("name", self._name, val)
-
-    @property
     def age(self): return self._age
+    
     @age.setter
-    def age(self, val): self._age = self._set("age", self._age, val)
-
-    @property
-    def city(self): return self._city
-    @city.setter
-    def city(self, val): self._city = self._set("city", self._city, val)
-
-    def __str__(self): return f"Person({self._name}, {self._age})"
+    def age(self, value):
+        self._age = self._update("age", self._age, value)
+    
+    def __str__(self): return f"Человек({self._name}, {self._age})"
 
 class Product(BaseObservable):
     def __init__(self, title, price, stock):
@@ -106,43 +93,33 @@ class Product(BaseObservable):
         self._stock = stock
 
     @property
-    def title(self): return self._title
-    @title.setter
-    def title(self, val): self._title = self._set("title", self._title, val)
-
-    @property
     def price(self): return self._price
+    
     @price.setter
-    def price(self, val): self._price = self._set("price", self._price, val)
+    def price(self, value):
+        self._price = self._update("price", self._price, value)
 
-    @property
-    def stock(self): return self._stock
-    @stock.setter
-    def stock(self, val): self._stock = self._set("stock", self._stock, val)
-
-    def __str__(self): return f"Product({self._title}, {self._price})"
+    def __str__(self): return f"Товар({self._title}, {self._price})"
 
 if __name__ == "__main__":
-    p = Person("Ivan", 20, "Omsk")
-    prod = Product("Phone", 500, 10)
+    user = Person("Алиса", 25, "Москва")
+    item = Product("Ноутбук", 1000, 5)
 
-    console = ConsoleLogger()
-    f_log = FileLogger()
-    valid = Validator()
+    logger = ConsoleLogger()
+    file_log = FileLogger()
+    validator = Validator()
 
-    p.on_changing += valid
-    p.on_changed += console
-    p.on_changed += f_log
+    user.on_changing += validator
+    item.on_changing += validator
 
-    prod.on_changing += valid
-    prod.on_changed += console
+    user.on_changed += logger
+    user.on_changed += file_log
+    item.on_changed += logger
 
-    print("--- Тест 1: Нормальное изменение ---")
-    p.name = "Dmitry"
-    prod.price = 600
+    print("--- Тест 1: Успешное изменение ---")
+    user.age = 26
 
-    print("\n--- Тест 2: Блокировка валидатором ---")
-    p.age = -5 
-    p.name = ""
+    print("\n--- Тест 2: Отмена изменения (валидация) ---")
+    item.price = -500
 
-    print(f"\nИтог: {p}, Товар стоит: {prod.price}")
+    print(f"\nИтог: Возраст: {user.age}, Цена: {item.price}")
