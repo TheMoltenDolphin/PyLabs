@@ -1,125 +1,112 @@
-from typing import Any, Protocol, List, Generic, TypeVar
+import uuid
 
-T = TypeVar("T")
-
-class EventHandler(Protocol[T]):
-    def handle(self, sender: Any, args: T) -> None:
-        ...
-
-class Event(Generic[T]):
+class Injector:
     def __init__(self):
-        self._handlers: List[EventHandler[T]] = []
+        self.map = {}
+        self.singletons = {}
+        self.scope_data = {}
+        self.is_scope_active = False
 
-    def __iadd__(self, handler: EventHandler[T]):
-        self._handlers.append(handler)
-        return self
+    def register(self, interface, target, life_circle="PerRequest", params=None):
+        self.map[interface] = {
+            "target": target,
+            "style": life_circle,
+            "params": params or {}
+        }
 
-    def __isub__(self, handler: EventHandler[T]):
-        self._handlers.remove(handler)
-        return self
+    def get_instance(self, interface):
+        if interface not in self.map:
+            raise ValueError(f"Ошибка: Интерфейс '{interface}' не зарегистрирован.")
 
-    def invoke(self, sender: Any, args: T):
-        for handler in self._handlers:
-            handler.handle(sender, args)
+        info = self.map[interface]
+        style = info["style"]
+        target = info["target"]
+        params = info["params"]
 
-class PropertyChangedEventArgs:
-    def __init__(self, prop_name: str):
-        self.property_name = prop_name
+        if style == "Singleton":
+            if interface not in self.singletons:
+                self.singletons[interface] = self.create_object(target, params)
+            return self.singletons[interface]
 
-class PropertyChangingEventArgs:
-    def __init__(self, prop_name: str, old_val: Any, new_val: Any):
-        self.property_name = prop_name
-        self.old_value = old_val
-        self.new_value = new_val
-        self.can_change = True
+        if style == "Scoped":
+            if not self.is_scope_active:
+                raise RuntimeError(f"Ошибка: Интерфейс '{interface}' (Scoped) вызван вне блока with.")
+            if interface not in self.scope_data:
+                self.scope_data[interface] = self.create_object(target, params)
+            return self.scope_data[interface]
 
-class ConsoleLogger(EventHandler[PropertyChangedEventArgs]):
-    def handle(self, sender: Any, args: PropertyChangedEventArgs):
-        print(f"Свойство '{args.property_name}' было изменено.")
+        return self.create_object(target, params)
 
-class FileLogger(EventHandler[PropertyChangedEventArgs]):
-    def handle(self, sender: Any, args: PropertyChangedEventArgs):
-        filename = "events_log.txt"
+    def create_object(self, target, params):
         try:
-            with open(filename, "a", encoding="utf-8") as f:
-                f.write(f"Лог: {sender} изменил {args.property_name}\n")
-        except PermissionError:
-            print(f"Ошибка: нет прав доступа к файлу {filename}")
-        except IOError as e:
-            print(f"Ошибка ввода-вывода: {e}")
+            if callable(target) and not isinstance(target, type):
+                return target()
 
-class Validator(EventHandler[PropertyChangingEventArgs]):
-    def handle(self, sender: Any, args: PropertyChangingEventArgs):
-        if args.property_name in ["age", "price"] and args.new_value < 0:
-            print(f"Внимание: Нельзя установить отрицательное значение для '{args.property_name}'!")
-            args.can_change = False
+            args = {}
+            for key, value in params.items():
+                if isinstance(value, str) and value in self.map:
+                    args[key] = self.get_instance(value)
+                else:
+                    args[key] = value
+            
+            return target(**args)
+        except TypeError as e:
+            raise TypeError(f"Ошибка в аргументах конструктора: {e}")
 
-class BaseObservable:
-    def __init__(self):
-        self.on_changed = Event[PropertyChangedEventArgs]()
-        self.on_changing = Event[PropertyChangingEventArgs]()
+    def __enter__(self):
+        self.is_scope_active = True
+        self.scope_data = {}
+        return self
 
-    def _update(self, name: str, old_val: Any, new_val: Any):
-        args_changing = PropertyChangingEventArgs(name, old_val, new_val)
-        self.on_changing.invoke(self, args_changing)
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.is_scope_active = False
+        self.scope_data = {}
 
-        if not args_changing.can_change:
-            return old_val 
+class Engine: pass
+class PetrolEngine: 
+    def info(self): return "Бензиновый двигатель"
+class ElectricEngine: 
+    def info(self): return "Электродвигатель"
 
-        self.on_changed.invoke(self, PropertyChangedEventArgs(name))
-        return new_val
+class Logger: pass
+class DebugLogger:
+    def log(self, msg): print(f"[ОТЛАДКА]: {msg}")
+class ReleaseLogger:
+    def log(self, msg): print(f"[РЕЛИЗ]: {msg}")
 
-class Person(BaseObservable):
-    def __init__(self, name, age, city):
-        super().__init__()
-        self._name = name
-        self._age = age
-        self._city = city
+class Car: pass
+class CityCar:
+    def __init__(self, engine, logger):
+        self.engine = engine
+        self.logger = logger
+    def drive(self):
+        self.logger.log(f"Запуск. {self.engine.info()}")
 
-    @property
-    def age(self): return self._age
-    
-    @age.setter
-    def age(self, value):
-        self._age = self._update("age", self._age, value)
-    
-    def __str__(self): return f"Человек({self._name}, {self._age})"
+inj1 = Injector()
+inj1.register("Engine", PetrolEngine, "Singleton")
+inj1.register("Logger", DebugLogger, "PerRequest")
+inj1.register("Car", CityCar, "Scoped", {"engine": "Engine", "logger": "Logger"})
 
-class Product(BaseObservable):
-    def __init__(self, title, price, stock):
-        super().__init__()
-        self._title = title
-        self._price = price
-        self._stock = stock
+inj2 = Injector()
+inj2.register("Engine", ElectricEngine, "Singleton")
+inj2.register("Logger", lambda: ReleaseLogger())
+inj2.register("Car", CityCar, "PerRequest", {"engine": "Engine", "logger": "Logger"})
 
-    @property
-    def price(self): return self._price
-    
-    @price.setter
-    def price(self, value):
-        self._price = self._update("price", self._price, value)
+print("--- Тест Конфигурации 1 ---")
+with inj1:
+    car_a = inj1.get_instance("Car")
+    car_b = inj1.get_instance("Car")
+    print(f"Объекты совпали в Scope: {car_a is car_b}")
+    car_a.drive()
 
-    def __str__(self): return f"Товар({self._title}, {self._price})"
+print("\n--- Тест Конфигурации 2 ---")
+car_c = inj2.get_instance("Car")
+car_d = inj2.get_instance("Car")
+print(f"Объекты разные в PerRequest: {car_c is not car_d}")
+car_c.drive()
 
-if __name__ == "__main__":
-    user = Person("Алиса", 25, "Москва")
-    item = Product("Ноутбук", 1000, 5)
-
-    logger = ConsoleLogger()
-    file_log = FileLogger()
-    validator = Validator()
-
-    user.on_changing += validator
-    item.on_changing += validator
-
-    user.on_changed += logger
-    user.on_changed += file_log
-    item.on_changed += logger
-
-    print("--- Тест 1: Успешное изменение ---")
-    user.age = 26
-
-    print("\n--- Тест 2: Отмена изменения (валидация) ---")
-    item.price = -500
-
-    print(f"\nИтог: Возраст: {user.age}, Цена: {item.price}")
+print("\n--- Проверка ошибок ---")
+try:
+    inj1.get_instance("Car")
+except RuntimeError as e:
+    print(e)
