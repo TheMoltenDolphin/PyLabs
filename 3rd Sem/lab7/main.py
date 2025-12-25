@@ -1,111 +1,170 @@
-import uuid
+from typing import Callable, Optional, Any, Type, Dict, List, get_type_hints
+from enum import Enum
+from abc import ABC, abstractmethod
+
+class LifeStyle(Enum):
+    PerRequest = "PerRequest"
+    Scoped = "Scoped"
+    Singleton = "Singleton"
+
+class DIError(Exception):
+    pass
+
+class DependencyResolutionError(DIError):
+    pass
+
+class RegistrationError(DIError):
+    pass
 
 class Injector:
-    def __init__(self):
-        self.registry = {}
-        self.singletons = {}
-        self.scoped_instances = {}
-        self.current_scope = None
+    def __init__(self) -> None:
+        self.registered_interfaces: Dict[Any, dict] = {}
+        self._scope_stack: List[Dict[Any, Any]] = []
+        self._singleton_instances: Dict[Any, Any] = {}
 
-    def register(self, interface, provider, lifestyle="PerRequest", params=None):
-        self.registry[interface] = {
-            "provider": provider,
+    def register(self, interface: Any, 
+                 class_or_factory: Any, 
+                 lifestyle: LifeStyle = LifeStyle.PerRequest, 
+                 params: Optional[Dict[str, Any]] = None) -> None:
+        
+        if isinstance(class_or_factory, type):
+            target = class_or_factory.__init__
+            try:
+                hints = get_type_hints(target)
+                for name, arg_type in hints.items():
+                    if name in ('return', 'self'):
+                        continue
+                    
+                    is_manual = params and name in params
+                    
+                    if not is_manual and arg_type not in self.registered_interfaces:
+                        raise RegistrationError(
+                            f"Ошибка регистрации '{class_or_factory.__name__}': "
+                            f"параметр '{name}' использует незарегистрированный тип '{arg_type.__name__ if hasattr(arg_type, '__name__') else arg_type}'"
+                        )
+            except (TypeError, NameError):
+                pass
+
+        self.registered_interfaces[interface] = {
+            "provider": class_or_factory,
             "lifestyle": lifestyle,
-            "params": params or {}
+            "params": params if params else {}
         }
 
-    def get_instance(self, interface):
-        config = self.registry.get(interface)
-        if not config:
-            raise Exception(f"Интерфейс {interface} не зарегистрирован")
-
-        lifestyle = config["lifestyle"]
-        provider = config["provider"]
-        params = config["params"]
-
-        if lifestyle == "Singleton":
-            if interface not in self.singletons:
-                self.singletons[interface] = self.create(provider, params)
-            return self.singletons[interface]
-
-        if lifestyle == "Scoped":
-            if self.current_scope is None:
-                raise Exception("Scope не открыт")
-            if interface not in self.scoped_instances:
-                self.scoped_instances[interface] = self.create(provider, params)
-            return self.scoped_instances[interface]
-
-        return self.create(provider, params)
-
-    def create(self, provider, params):
-        if callable(provider) and not isinstance(provider, type):
-            return provider()
-        
-        actual_params = {}
-        for name, value in params.items():
-            if value in self.registry:
-                actual_params[name] = self.get_instance(value)
-            else:
-                actual_params[name] = value
-        return provider(**actual_params)
-
-    def __enter__(self):
-        self.current_scope = uuid.uuid4()
-        self.scoped_instances = {}
-        return self
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        self.current_scope = None
-        self.scoped_instances = {}
-
-class Writer: pass
-class Database: pass
-class Logger: pass
-
-class ConsoleWriter:
-    def write(self, msg): print(f"Консоль: {msg}")
-
-class FileWriter:
-    def write(self, msg): print(f"Файл: {msg}")
-
-class DevDatabase:
-    def __init__(self, writer): self.writer = writer
-    def query(self): self.writer.write("Запрос к Dev DB")
-
-class ProdDatabase:
-    def __init__(self, writer): self.writer = writer
-    def query(self): self.writer.write("Запрос к Prod DB")
-
-class SimpleLogger:
-    def log(self): print("Обычный логгер")
-
-class FastLogger:
-    def log(self): print("Быстрый логгер")
-
-inj1 = Injector()
-inj1.register("Writer", ConsoleWriter, "Singleton")
-inj1.register("Database", DevDatabase, "Scoped", {"writer": "Writer"})
-inj1.register("Logger", lambda: FastLogger())
-
-inj2 = Injector()
-inj2.register("Writer", FileWriter, "PerRequest")
-inj2.register("Database", ProdDatabase, "Singleton", {"writer": "Writer"})
-inj2.register("Logger", SimpleLogger, "Singleton")
-
-print("--- Тест Конфигурации 1 (Debug) ---")
-with inj1:
-    db1 = inj1.get_instance("Database")
-    db2 = inj1.get_instance("Database")
-    print(f"Это один объект в scope? {db1 is db2}")
-    db1.query()
+    def open_scope(self) -> 'Scope':
+        return Scope(self)
     
-    log = inj1.get_instance("Logger")
-    log.log()
+    def _push_scope(self) -> None:
+        self._scope_stack.append({})
 
-print("\n--- Тест Конфигурации 2 (Release) ---")
-w1 = inj2.get_instance("Writer")
-w2 = inj2.get_instance("Writer")
-print(f"Это разные объекты (PerRequest)? {w1 is not w2}")
+    def _pop_scope(self) -> None:
+        self._scope_stack.pop()
 
-db_prod = inj2.get_instance("Database")
-db_prod.query()
+    def _current_scope(self) -> Optional[Dict]:
+        return self._scope_stack[-1] if self._scope_stack else None
+
+    def get_instance(self, interface_type: Any) -> Any:
+        if interface_type not in self.registered_interfaces:
+            raise DependencyResolutionError(f"Интерфейс {interface_type} не зарегистрирован")
+
+        reg = self.registered_interfaces[interface_type]
+        provider = reg["provider"]
+        manual_params = reg["params"]
+        lifestyle = reg["lifestyle"]
+
+        constructor_args = {}
+        target = provider.__init__ if isinstance(provider, type) else provider
+        
+        try:
+            hints = get_type_hints(target)
+        except:
+            hints = {}
+
+        for name, arg_type in hints.items():
+            if name in ('return', 'self'): continue
+            
+            if name in manual_params:
+                constructor_args[name] = manual_params[name]
+            elif arg_type in self.registered_interfaces:
+                constructor_args[name] = self.get_instance(arg_type)
+            else:
+                raise DependencyResolutionError(
+                    f"Не удалось разрешить зависимость '{name}: {arg_type}'"
+                )
+
+        if lifestyle == LifeStyle.PerRequest:
+            return provider(**constructor_args)
+        
+        elif lifestyle == LifeStyle.Singleton:
+            if interface_type not in self._singleton_instances:
+                self._singleton_instances[interface_type] = provider(**constructor_args)
+            return self._singleton_instances[interface_type]
+        
+        elif lifestyle == LifeStyle.Scoped:
+            scope = self._current_scope()
+            if scope is None:
+                raise RuntimeError("Объект Scoped запрошен вне Scope")
+            if interface_type not in scope:
+                scope[interface_type] = provider(**constructor_args)
+            return scope[interface_type]
+
+class Scope:
+    def __init__(self, injector: Injector) -> None:
+        self.injector = injector
+    def __enter__(self) -> Injector:
+        self.injector._push_scope()
+        return self.injector
+    def __exit__(self, *args) -> None:
+        self.injector._pop_scope()
+
+class IBase(ABC):
+    @abstractmethod
+    def action(self): ...
+
+class IDependency(ABC):
+    @abstractmethod
+    def work(self): ...
+
+class Dependency(IDependency):
+    def work(self): return "работа выполнена"
+
+class Implementation(IBase):
+    def __init__(self, dep: IDependency):
+        self.dep = dep
+    def action(self): return self.dep.work()
+
+class TestClass:
+    pass
+
+def run_tests():
+    
+    inj = Injector()
+    try:
+        inj.register(IBase, Implementation)
+        print("Тест провален: Регистрация с незарегистрированной зависимостью")
+    except RegistrationError as e:
+        print(f"Тест пройден: Попытка регистрации от незарегистрированного объекта пресечена: {e}")
+
+    inj = Injector()
+    inj.register(IDependency, Dependency)
+    try:
+        inj.register(IBase, Implementation)
+        print("Тест пройден: Корректный порядок регистрации (зависимость уже в реестре)")
+    except RegistrationError:
+        print("Тест провален: Корректный порядок регистрации")
+
+    class Single: pass
+    inj.register(Single, Single, lifestyle=LifeStyle.Singleton)
+    assert inj.get_instance(Single) is inj.get_instance(Single)
+    print("Тест пройден: Singleton возвращает один и тот же экземпляр")
+
+    class ScopedObj: pass
+    inj.register(ScopedObj, ScopedObj, lifestyle=LifeStyle.Scoped)
+    with inj.open_scope() as s:
+        o1 = s.get_instance(ScopedObj)
+        o2 = s.get_instance(ScopedObj)
+        assert o1 is o2
+    print("Тест пройден: Scoped сохраняет объект внутри контекста")
+
+if __name__ == "__main__":
+    run_tests()
