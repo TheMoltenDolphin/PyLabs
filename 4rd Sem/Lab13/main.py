@@ -1,30 +1,33 @@
-def solve_knapsack(weights, values, capacity):
-    n = len(values)
-    dp = [[0 for _ in range(capacity + 1)] for _ in range(n + 1)]
+def can_pack(items, bins, item_idx, capacity):
+    if item_idx == len(items):
+        return True
 
-    for i in range(1, n + 1):
-        for w in range(capacity + 1):
-            if weights[i-1] <= w:
-                dp[i][w] = max(values[i-1] + dp[i-1][w - weights[i-1]], dp[i-1][w])
-            else:
-                dp[i][w] = dp[i-1][w]
+    item = items[item_idx]
+    for i in range(len(bins)):
+        if bins[i] + item <= capacity:
+            bins[i] += item
+            if can_pack(items, bins, item_idx + 1, capacity):
+                return True
+            bins[i] -= item
+        
+        if bins[i] == 0:
+            break
+            
+    return False
 
-    max_value = dp[n][capacity]
+def solve_bin_packing(items, capacity):
+    items.sort(reverse=True)
     
-    selected_items = []
-    w = capacity
-    for i in range(n, 0, -1):
-        if dp[i][w] != dp[i-1][w]:
-            selected_items.append(i - 1)
-            w -= weights[i-1]
+    for num_bins in range(1, len(items) + 1):
+        bins = [0] * num_bins
+        if can_pack(items, bins, 0, capacity):
+            return num_bins, bins
+    return None
 
-    return max_value, selected_items
+item_sizes = [4, 8, 1, 4, 2, 1]
+bin_capacity = 10
 
-item_weights = [2, 3, 4, 5]
-item_values = [3, 4, 5, 8]
-bag_capacity = 5
+min_bins, final_state = solve_bin_packing(item_sizes, bin_capacity)
 
-result_val, result_items = solve_knapsack(item_weights, item_values, bag_capacity)
-
-print(f"Maximum value: {result_val}")
-print(f"Selected item indices: {result_items}")
+print(f"Minimum bins: {min_bins}")
+print(f"Final filling: {final_state}")
